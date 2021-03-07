@@ -64,8 +64,10 @@ class BluetoothActivity  : AppCompatActivity(){
                     else
                         mBluetoothStatus!!.text="Connection Failed"
                 }
-//                else if(msg.what == MESSAGE_READ )
-//                    val message=String(msg.obj as ByteArray, 0, msg.arg1);
+                else if(msg.what == MESSAGE_READ ) {
+                    val message = String(msg.obj as ByteArray, 0, msg.arg1);
+                    Log.e("MessageReceived",message)
+                }
             }
         }
         if (mBTArrayAdapter == null){
