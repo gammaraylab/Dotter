@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:padding="8dp"
+    android:background="@color/color_breadcrumb_background"
+    >
+    <ImageView
+        android:id="@+id/imageViewBreadcrumbIcon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:padding="2dp"
+        android:src="@drawable/seprator_icon"
+        app:tint="@color/color_breadcrumb_icon"
+        android:contentDescription="breadcrumb icon" />
+    <TextView
+        android:id="@+id/textViewDir"
+        android:layout_width="wrap_content"
+        android:layout_height="20dp"
+        android:text="Root directory"
+        />
+</LinearLayout>

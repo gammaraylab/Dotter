@@ -1,0 +1,9 @@
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name">Dotter</string>
+    <string name="show_paired_devices">Show paired Devices</string>
+    <string name="lt_bluetooth_status"><![CDATA[<Bluetooth Status>]]></string>
+    <string name="status">Status:</string>
+    <string name="send">Send</string>
+
+    <string name="file_change_broadcast">com.gammaray.dotter.file_change_broadcast</string>
+</resources>
