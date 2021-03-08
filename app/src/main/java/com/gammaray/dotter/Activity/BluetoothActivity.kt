@@ -146,11 +146,15 @@ class BluetoothActivity  : AppCompatActivity(){
     }
     private fun doHandShake(value: Char, width: Int){   //does the handshake and sends the width
         mConnectedThread!!.write(value.toInt())
-        sleep(100)
-        if(mConnectedThread?.read()!=value.toInt()){
-            runOnUiThread{MainActivity.toast("handshake failed")}
+        sleep(200)
+        val x=mConnectedThread?.read()
+        if(x!=value.toInt()){
+            runOnUiThread{MainActivity.toast("handshake failed, $x received")}
             finish()
         }
+        else
+            runOnUiThread{MainActivity.toast("handshake succeeded")}
+
         mConnectedThread!!.write(width) //sending the width of image
     }
     private fun waitUntilReady(){
