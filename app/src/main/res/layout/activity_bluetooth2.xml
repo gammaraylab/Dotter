@@ -1,86 +1,230 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
-    tools:context=".Activity.BluetoothActivity">
-
-    <Button
-        android:id="@+id/sendData"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="10dp"
-        android:text="Send"
-        android:visibility="gone"
-        android:textStyle="bold" />
-    <Button
-        android:id="@+id/stopData"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="Stop"
-        android:visibility="gone"
-        android:textStyle="bold"/>
-    <ProgressBar
-        style="?android:attr/progressBarStyleHorizontal"
-        android:id="@+id/progressBar"
-        android:layout_width="match_parent"
-        android:layout_height="25dp"
-        android:padding="14dp"
-        android:progress="0"
-        android:max="100"
-        android:visibility="gone"
-        />
-    <TextView
-        android:id="@+id/progressPercent"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="0%"
-        android:textSize="15sp"
-        android:layout_gravity="center"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:textAlignment="center"
-        android:visibility="gone"
-        style="@style/TextAppearance.AppCompat.Body1"
-        />
-
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".Activity.BluetoothActivity"
+    >
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
+        android:orientation="vertical"
+        android:padding="4dp"
+        >
+        <ImageView
+            android:id="@+id/bitmapPreview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/image_des" />
         <TextView
+            android:id="@+id/imageWidthInCM"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="0.1"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="Status"
+            android:text="Width of image="
+            android:layout_marginBottom="12dp"
+            />
+        <TextView
+            android:id="@+id/imageHeightInCM"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Height of image="
+            android:layout_marginBottom="12dp"
+            />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            >
+            <LinearLayout
+                android:id="@+id/linearLayout1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                android:orientation="vertical"
+                >
+                <TextView
+                    style="@style/statusTextViewStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/right_stepper_delay"
+                    android:textSize="30sp"
+                    />
+                <TextView
+                    style="@style/statusTextViewStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/left_stepper_delay"
+                    android:textSize="30sp"
+                    />
+                <TextView
+                    style="@style/statusTextViewStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/writehead_delay"
+                    android:textSize="30sp"
+                    />
+            </LinearLayout>
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/linearLayout1"
+                >
+                <EditText
+                    style="@style/inputEditViewStyle"
+                    android:id="@+id/rightDelay"
+                    android:background="@color/color_gray"
+                    android:text="30"
+                    />
+                <EditText
+                    style="@style/inputEditViewStyle"
+                    android:id="@+id/leftDealy"
+                    android:background="@color/color_gray"
+                    android:text="18"
+                    />
+                <EditText
+                    style="@style/inputEditViewStyle"
+                    android:id="@+id/writeDelay"
+                    android:background="@color/color_gray"
+                    android:text="110"
+                    />
+            </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+        <Button
+            android:id="@+id/sendData"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="10dp"
+            android:text="Send"
+            android:visibility="gone"
             android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/bluetooth_status"
+        <Button
+            android:id="@+id/stopData"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="0.9"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:text="bluetooth_status" />
+            android:layout_gravity="center"
+            android:text="Stop"
+            android:visibility="gone"
+            android:textStyle="bold"/>
+        <ProgressBar
+            style="?android:attr/progressBarStyleHorizontal"
+            android:id="@+id/progressBar"
+            android:layout_width="match_parent"
+            android:layout_height="25dp"
+            android:padding="14dp"
+            android:progress="0"
+            android:max="100"
+            android:visibility="gone"
+            />
+        <TextView
+            android:id="@+id/progressPercent"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0%"
+            android:textSize="15sp"
+            android:layout_gravity="center"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textAlignment="center"
+            android:visibility="gone"
+            style="@style/TextAppearance.AppCompat.Body1"
+            />
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            >
+            <LinearLayout
+                android:id="@+id/fixedTextView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                >
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Print: "
+                style="@style/statusTextViewStyle"
+                />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Conversion: "
+                style="@style/statusTextViewStyle"
+                />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Handshake: "
+                style="@style/statusTextViewStyle"
+                />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                style="@style/statusTextViewStyle"
+                android:text="Bluetooth: "
+                />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toEndOf="@+id/fixedTextView"
+                >
+                <TextView
+                    android:id="@+id/printingStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Nothing printed yet"
+                    />
+                <TextView
+                    android:id="@+id/conversionStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="not converted"
+                    />
+                <TextView
+                    android:id="@+id/handshakeInfo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="not yet"
+                    />
+                <TextView
+                    android:id="@+id/bluetooth_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="0.9"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="bluetooth_status" />
+            </LinearLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <Button
+            android:id="@+id/paired_btn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Show paired devices" />
+
+        <ListView
+            android:id="@+id/devices_list_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:choiceMode="singleChoice"
+            android:layout_marginBottom="40dp"
+            android:layout_marginTop="20dp"
+            android:divider="@color/black"
+            />
     </LinearLayout>
-
-    <Button
-        android:id="@+id/paired_btn"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Show paired devices" />
-
-    <ListView
-        android:id="@+id/devices_list_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:choiceMode="singleChoice" />
-</LinearLayout>
+</ScrollView>

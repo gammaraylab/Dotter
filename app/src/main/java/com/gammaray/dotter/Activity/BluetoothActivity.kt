@@ -4,30 +4,27 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.*
-import android.util.Log
 import android.view.View
 import android.widget.*
 import android.widget.AdapterView.OnItemClickListener
 import androidx.appcompat.app.AppCompatActivity
-import com.gammaray.dotter.ConnectedThread
 import com.gammaray.dotter.R
+import com.gammaray.dotter.Services.PrintService
 import kotlinx.android.synthetic.main.activity_bluetooth2.*
-import java.io.FileNotFoundException
-import java.io.IOException
 import java.lang.Thread.sleep
-import java.security.SecureRandom
-import kotlin.random.Random
 
 @SuppressLint("SetTextI18n")
 class BluetoothActivity  : AppCompatActivity(){
     private  val  TAG: String = BluetoothActivity::class.java.simpleName
 
-    private var sent=0
+    private var sent:Double=0.0
     private val sb=java.lang.StringBuilder()
 
     private var  mBluetoothStatus: TextView? = null
@@ -37,14 +34,9 @@ class BluetoothActivity  : AppCompatActivity(){
     private var  mBTAdapter: BluetoothAdapter? = null
     private var  mPairedDevices: Set<BluetoothDevice>? = null
     private var  mBTArrayAdapter: ArrayAdapter<String>? = null
-    private var  mHandler : Handler? = null
-    private var  mConnectedThread : ConnectedThread? = null
     private var  mBTSocket: BluetoothSocket? = null
-    private var wakeLock:PowerManager.WakeLock?=null
+    private var  mIntent:Intent?=null
 
-    private fun log(message:String){
-        Log.e("BluetoothActivity",message)
-    }
     @ExperimentalUnsignedTypes
     override fun onCreate(savedInstanceState: Bundle?){
         super.onCreate(savedInstanceState)
@@ -57,76 +49,34 @@ class BluetoothActivity  : AppCompatActivity(){
         mDevicesListView = findViewById(R.id.devices_list_view)
         mDevicesListView!!.adapter = mBTArrayAdapter // assign model to view
         mDevicesListView!!.onItemClickListener = mDeviceClickListener
-        wakeLock=(this.getSystemService(Context.POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"Wakelock:bluetoothActivity")
+        mIntent=Intent(this,PrintService::class.java)
 
-        mHandler = object : Handler(Looper.getMainLooper()){
-            override  fun handleMessage(msg: Message){
-                if (msg.what == CONNECTING_STATUS){
-                    if (msg.arg1 == 1)
-                        mBluetoothStatus!!.text = "Connected to Device: " + msg.obj
-                    else
-                        mBluetoothStatus!!.text="Connection Failed"
-                }
-            }
-        }
-        if (mBTArrayAdapter == null){
+        registerReceiver(broadCastReceiver, IntentFilter(UPDATE_FLAG))  //broadcast receiver for updating UI
+
+        val image: Bitmap = BitmapFactory.decodeFile(intent.getStringExtra(FILE_PATH))
+        bitmapPreview.setImageBitmap(image)
+        imageWidthInCM.text="Width=${String.format("%.1f",image.width.toDouble()/42.32)} cm"
+        imageHeightInCM.text="Height=${String.format("%.1f",image.height.toDouble()/42.32)} cm"
+
+        if (mBTArrayAdapter == null)
             mBluetoothStatus!!.text="Status: Bluetooth not found"
-            Toast.makeText(applicationContext, "Bluetooth device not found!", Toast.LENGTH_SHORT).show()
-        } else {
-            var isThreadDead=true
+         else {
             sendData.setOnClickListener {
-                progressBar.visibility=View.VISIBLE
-                progressPercent.visibility=View.VISIBLE
                 stopData.visibility=View.VISIBLE
+                progressPercent.visibility=View.VISIBLE
+                progressBar.visibility=View.VISIBLE
 
-                progressBar.progress=0
-                progressPercent.text="0%"
-                Thread {
-                    if(isThreadDead) {
-                        isThreadDead = false
-                        val path: String? = intent.getStringExtra(FILE_PATH)
-                        try {
-                            val image: Bitmap = BitmapFactory.decodeFile(path)
-                            val data = convert(image)
-                            val width = image.width/8
-                            val height = image.height
+                mIntent?.putExtra(DELAY_RIGHT,rightDelay.text.toString().toInt())
+                mIntent?.putExtra(DELAY_LEFT,leftDealy.text.toString().toInt())
+                mIntent?.putExtra(DELAY_WRITE,writeDelay.text.toString().toInt())
 
-                            if (mConnectedThread != null && data?.isEmpty() == false) {
-                                if(wakeLock?.isHeld!=true)
-                                    wakeLock?.acquire()
-                                doHandShake('a', width)
-                                for (i in 0 until height) {
-                                    if (isThreadDead)
-                                        break
-                                    waitUntilReady()
-                                    for (j in 0 until width) {
-                                        sleep(0,200)
-                                        mConnectedThread!!.write(ByteArray(1){data[width * i + j]})
-                                    }
-                                    stats(i, height)
-                                }
-                            }
-                        } catch (e: NullPointerException) {
-                            e.printStackTrace()
-                        } catch (e: FileNotFoundException) {
-                            e.printStackTrace()
-                        }catch (e:IOException){
-                            e.printStackTrace()
-                            updateUI()
-                            finish()
-                        }finally {
-                            if(wakeLock?.isHeld==true)
-                                wakeLock?.release()
-                            isThreadDead = true
-
-                        }
-
-                    }
-                    updateUI()
-                }.start()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    this.startForegroundService(mIntent)
+                else
+                    startService(mIntent)
             }
             stopData.setOnClickListener {
-                isThreadDead=true
+                stopService(mIntent)
                 updateUI()
             }
             mListPairedDevicesBtn?.setOnClickListener {
@@ -137,65 +87,20 @@ class BluetoothActivity  : AppCompatActivity(){
     }
 
     private fun stats(i: Int, height: Int){
-        runOnUiThread {
-            sent = (100 * (i + 1) / height)
-            sb.append(sent)
-            sb.append("%")
-            progressPercent.text = sb.toString()
-            sb.clear()
-            progressBar.progress = sent
-        }
+        sent = (100.0*i.toDouble() / height.toDouble())
+        sb.append(String.format("%.2f",sent))
+        sb.append("%")
+        progressPercent.text = sb.toString()
+        sb.clear()
+        progressBar.progress = sent.toInt()
     }
 
     private fun updateUI(){
-        runOnUiThread{
-            if(mBTSocket?.isConnected==true)
-                mBTSocket?.close()
-            mBluetoothStatus!!.text = "not connected"
-            stopData.visibility=View.GONE
-        }
-    }
-    private fun doHandShake(value: Char, width: Int){   //does the handshake and sends the width
-        var x:Int?=0
-        try {
-            mConnectedThread!!.write(value.toInt())
-            sleep(200)
-            x= mConnectedThread?.read()
-        }catch (e:IOException){
-            e.printStackTrace()
-            updateUI()
-            finish()
-        }
-        if(x!=value.toInt()){
-            runOnUiThread{MainActivity.toast("handshake failed, $x received")}
-            finish()
-        }
-        else
-            runOnUiThread{MainActivity.toast("handshake succeeded")}
+        if(mBTSocket?.isConnected==true)
+            mBTSocket?.close()
+        mBluetoothStatus!!.text = "not connected"
+        stopData.visibility=View.GONE
 
-        try {
-            mConnectedThread!!.write(width) //sending the width of image
-        }catch (e:IOException){
-            e.printStackTrace()
-            updateUI()
-            finish()
-        }
-    }
-    private fun waitUntilReady(){
-        var ready=false
-        var x:Int?=0
-        try {
-            while (!ready) {              //wait until POSITIVE_ACKNOWLEDGEMENT is not received
-                x = mConnectedThread?.read()
-                log(x.toString())
-                ready = x == 'k'.toInt()
-                sleep(200)
-            }
-        }catch (e:IOException){
-            e.printStackTrace()
-            updateUI()
-            finish()
-        }
     }
     override fun onPause() {
         super.onPause()
@@ -203,6 +108,10 @@ class BluetoothActivity  : AppCompatActivity(){
             mBTSocket?.close()
     }
 
+    override fun onDestroy() {
+        unregisterReceiver(broadCastReceiver)
+        super.onDestroy()
+    }
     override fun onActivityResult(requestCode: Int, resultCode: Int, Data: Intent?){
         super.onActivityResult(requestCode, resultCode, Data)
         if (requestCode == REQUEST_ENABLE_BT){
@@ -221,9 +130,11 @@ class BluetoothActivity  : AppCompatActivity(){
                 mBTArrayAdapter?.add(device.name + "\n" + device.address)
         else {
             Toast.makeText(applicationContext, "Turning bluetooth on", Toast.LENGTH_SHORT).show()
-            mBTAdapter?.enable()
-            sleep(1000)
-            listPairedDevices()
+            Thread {
+                mBTAdapter?.enable()
+                sleep(1000)
+                listPairedDevices()
+            }.start()
         }
     }
     private val mDeviceClickListener: OnItemClickListener = object : OnItemClickListener{
@@ -232,91 +143,49 @@ class BluetoothActivity  : AppCompatActivity(){
                 Toast.makeText(baseContext, "Bluetooth not on", Toast.LENGTH_SHORT).show()
                 return
             }
-            mBluetoothStatus!!.text = "Connecting..."
             // Get the device MAC address, which is the last 17 chars in the View
             val info: String = (view as TextView).text.toString()
             val  address: String = info.substring(info.length - 17)
             val  name: String = info.substring(0, info.length - 17)
+            mIntent?.putExtra(FILE_PATH,intent.getStringExtra(FILE_PATH))
+            mIntent?.putExtra(ADDRESS,address)
+            mIntent?.putExtra(NAME,name)
 
-            // Spawn a new thread to avoid blocking the GUI one
-            object : java.lang.Thread(){
-                override  fun run(){
-                    var  fail = false
-                    val device: BluetoothDevice = mBTAdapter!!.getRemoteDevice(address)
-                    try {
-                        mBTSocket = createBluetoothSocket(device)
-                    }catch (e: IOException){
-                        fail = true
-                        Toast.makeText(baseContext, "Socket creation failed", Toast.LENGTH_SHORT).show()
-                    }
-                    try {
-                        mBTSocket!!.connect()
-                    }catch (e: IOException){
-                        try {
-                            fail = true
-                            mBTSocket!!.close()
-                            mHandler!!.obtainMessage(CONNECTING_STATUS, -1, -1)
-                                .sendToTarget()
-                        }catch (e2: IOException){
-                            Toast.makeText(baseContext, "Socket creation failed", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                    if (!fail){
-                        mConnectedThread = ConnectedThread((mBTSocket)!!, (mHandler)!!)
-                        mConnectedThread!!.start()
-                        mHandler!!.obtainMessage(CONNECTING_STATUS, 1, -1, name)
-                            .sendToTarget()
-                        runOnUiThread{
-                            sendData.visibility=View.VISIBLE
-                        }
-                    }
-                }
-            }.start()
+            sendData.visibility=View.VISIBLE
         }
     }
-    @Throws(IOException::class) private   fun createBluetoothSocket(device: BluetoothDevice): BluetoothSocket {
-        try {
-            val  m: java.lang.reflect.Method = device.javaClass.getMethod("createInsecureRfcommSocketToServiceRecord", java.util.UUID::class.java)
-            return m.invoke(device, BT_MODULE_UUID) as BluetoothSocket
-        }catch (e: java.lang.Exception){
-            Log.e(TAG, "Could not create Insecure RFComm Connection", e)
+    private val broadCastReceiver=object:BroadcastReceiver(){
+        var sent:Int?=0
+        var height:Int?=0
+        override fun onReceive(context: Context?, intent: Intent?) {
+            mBluetoothStatus!!.text=intent?.getStringExtra(UPDATE_BLUETOOTH_STATUS)
+            conversionStatus.text=intent?.getStringExtra(UPDATE_CONVERSION_STATUS)
+            printingStatus.text=intent?.getStringExtra(UPDATE_PRINTING_STATUS)
+            handshakeInfo.text=intent?.getStringExtra(UPDATE_HANDSHAKE_INFO)
+            sent=intent?.getIntExtra(UPDATE_SENT,0)
+            height=intent?.getIntExtra(HEIGHT,1)
+            stats(sent!!,height!!)
         }
-        return device.createRfcommSocketToServiceRecord(BT_MODULE_UUID)
-    }
-    @kotlin.ExperimentalUnsignedTypes
-    private fun convert(image: Bitmap):ArrayList<Byte>? {
-        val width=image.width
-        val height=image.height
-        if(width%8!=0){
-            MainActivity.toast( "width of image exceeds by ${width % 8} pixel!!")
-            return null
-        }
-        val output=ArrayList<Byte>()
-        val binary=StringBuilder()
-        var col:Int
-        for (row in 0 until height) {
-            col=width-1
-            while(col>=7) {
-                for(i in col downTo col-7){
-                    if(image.getPixel(i, row) ==-16777216)
-                        binary.append("1")
-                    else
-                        binary.append("0")
-                }   //end for
-
-                output.add(binary.toString().toUByte(2).toByte())
-                binary.clear()
-                col -=8
-            }        //end while
-        }
-
-        return output
     }
     companion object  {
-        private val BT_MODULE_UUID: java.util.UUID = java.util.UUID.fromString("00001101-0000-1000-8000-00805F9B34FB") // "random" unique identifier
+        val BT_MODULE_UUID: java.util.UUID = java.util.UUID.fromString("00001101-0000-1000-8000-00805F9B34FB") // "random" unique identifier
         private const val REQUEST_ENABLE_BT: Int = 1 // used to identify adding bluetooth names
-        const val MESSAGE_READ: Int = 2 // used in bluetooth handler to identify message update
-        private const val CONNECTING_STATUS: Int = 3 // used in bluetooth handler to identify message status
-        const val FILE_PATH="com.gammaray.dotter.file_path"
+        const val FILE_PATH= "com.gammaray.dotter.file_path"
+        const val ADDRESS= "com.gammaray.dotter.address"
+        const val NAME= "com.gammaray.dotter.name"
+
+        const val UPDATE_FLAG="com.gammaray.dotter.update_flag"
+        const val UPDATE_SENT="com.gammaray.dotter.update_sent"
+        const val UPDATE_BLUETOOTH_STATUS="com.gammaray.dotter.update_status"
+        const val UPDATE_HANDSHAKE_INFO="com.gammaray.dotter.update_handshake_info"
+        const val UPDATE_ERROR="com.gammaray.dotter.update_error"       // -1 INVALID WIDTH OF BMP, -2 handshake failed, -3 Insecure RFComm Connection not created, -4 Socket creation failed
+        const val UPDATE_CONVERSION_STATUS="com.gammaray.dotter.update_conversion_status"
+        const val UPDATE_PRINTING_STATUS="com.gammaray.dotter.update_printing_status"
+
+        const val HEIGHT="com.gammaray.dotter.height"
+        const val DELAY_RIGHT="com.gammaray.dotter.delay_right"
+        const val DELAY_LEFT="com.gammaray.dotter.delay_left"
+        const val DELAY_WRITE="com.gammaray.dotter.delay_write"
+
     }
 }

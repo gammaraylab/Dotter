@@ -11,13 +11,13 @@
 
     <permission android:name="android.permission.BLUETOOTH" android:label="BLUETOOTH" />
     <permission android:name="android.permission.BLUETOOTH_ADMIN" />
-
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_dotter"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@drawable/ic_dotter"
         android:supportsRtl="true"
         android:theme="@style/Theme.Dotter">
         <activity android:name=".Activity.BluetoothActivity" />
@@ -28,7 +28,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name=".Services.BluetoothService"/>
+        <service android:name=".Services.PrintService"/>
         <provider
             android:name=".FileUtils.GenericFileProvider"
             android:authorities="com.gammaray.dotter.FileUtils.GenericFileProvider"

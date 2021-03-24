@@ -6,4 +6,8 @@
     <string name="send">Send</string>
 
     <string name="file_change_broadcast">com.gammaray.dotter.file_change_broadcast</string>
+    <string name="right_stepper_delay">Right stepper delay:</string>
+    <string name="left_stepper_delay">Left stepper delay:</string>
+    <string name="writehead_delay">Writehead delay:</string>
+    <string name="image_des">Displays the preview of the selected image</string>
 </resources>

@@ -13,4 +13,20 @@
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
     </style>
+
+    <style name="statusTextViewStyle" >
+        <item name="maxLines">1</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="inputEditViewStyle" >
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:inputType">number</item>
+        <item name="maxLines">1</item>
+        <item name="android:textSize">30sp</item>
+        <item name="android:hint">enter value</item>
+
+    </style>
+
 </resources>
