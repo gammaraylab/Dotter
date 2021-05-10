@@ -89,7 +89,7 @@
                     style="@style/inputEditViewStyle"
                     android:id="@+id/writeDelay"
                     android:background="@color/color_gray"
-                    android:text="110"
+                    android:text="85"
                     />
             </LinearLayout>
         </androidx.constraintlayout.widget.ConstraintLayout>

@@ -62,7 +62,7 @@ class BluetoothActivity  : AppCompatActivity(){
             mBluetoothStatus!!.text="Status: Bluetooth not found"
          else {
             sendData.setOnClickListener {
-                stopData.visibility=View.VISIBLE
+//                stopData.visibility=View.VISIBLE
                 progressPercent.visibility=View.VISIBLE
                 progressBar.visibility=View.VISIBLE
 

@@ -27,6 +27,7 @@ import com.gammaray.dotter.Activity.BluetoothActivity.Companion.UPDATE_PRINTING_
 import com.gammaray.dotter.Activity.MainActivity
 import com.gammaray.dotter.ConnectedThread
 import com.gammaray.dotter.R
+import kotlinx.android.synthetic.main.activity_bluetooth2.*
 import java.io.FileNotFoundException
 import java.io.IOException
 
@@ -51,18 +52,32 @@ class PrintService : Service() {
     private var minLeft=0
     private var secLeft=0
     private var rate=0
+    private var isConverted=false
 
+    private var image: Bitmap? =null
+    private var data:ArrayList<Int>? = null
+
+
+    private val sb=StringBuilder()
     private val updateBroadcastIntent=Intent(UPDATE_FLAG)
 
     @ExperimentalUnsignedTypes
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if(intent!!.action== ACTION_STOP_PRINTING && intent.getBooleanExtra(EXTRA_NOTIFICATION_ID,false))
+        if(intent!!.action== ACTION_STOP_PRINTING && intent.getBooleanExtra(EXTRA_NOTIFICATION_ID,false)) {
+            updateBroadcastIntent.putExtra(UPDATE_PRINTING_STATUS,"Printing failed")
+            sendBroadcast(updateBroadcastIntent)
             endTask()
+        }
 
         filePath=intent.getStringExtra(BluetoothActivity.FILE_PATH)
         address=intent.getStringExtra(BluetoothActivity.ADDRESS)
         name= intent.getStringExtra(BluetoothActivity.NAME)
 
+        image=BitmapFactory.decodeFile(filePath)
+        Thread {
+            data = convert(image!!)
+            isConverted=true
+        }.start()
         delayRight=intent.getIntExtra(BluetoothActivity.DELAY_RIGHT,30)
         delayLeft=intent.getIntExtra(BluetoothActivity.DELAY_LEFT,18)
         delayWrite=intent.getIntExtra(BluetoothActivity.DELAY_WRITE,110)
@@ -81,12 +96,12 @@ class PrintService : Service() {
 
         notificationBuilder = NotificationCompat.Builder(this, channelID)
         notificationBuilder!!
-                .setContentTitle(notificationTitle)
-                .setContentText("calculating time...")
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentIntent(pendingIntent)
-                .setProgress(100,0,false)
-                .addAction(R.drawable.ic_stop_service,"Stop printing",stopServicePendingIntent)
+            .setContentTitle(notificationTitle)
+            .setContentText("calculating time...")
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentIntent(pendingIntent)
+            .setProgress(100,0,false)
+            .addAction(R.drawable.ic_stop_service,"Stop printing",stopServicePendingIntent)
         notification=notificationBuilder?.build()
         startForeground(1, notification)
 
@@ -98,7 +113,8 @@ class PrintService : Service() {
     }
 
     override fun onDestroy() {
-        log("service destroyed()")
+        updateBroadcastIntent.putExtra(UPDATE_PRINTING_STATUS,"Image printed")
+        sendBroadcast(updateBroadcastIntent)
         endTask()
     }
     override fun onCreate() {
@@ -109,7 +125,7 @@ class PrintService : Service() {
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel(channelId: String, channelName: String){
         val chan = NotificationChannel(channelId,
-                channelName, NotificationManager.IMPORTANCE_NONE)
+            channelName, NotificationManager.IMPORTANCE_NONE)
         chan.lightColor = Color.BLUE
         chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
         val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -119,7 +135,7 @@ class PrintService : Service() {
         Log.e("BluetoothService",message)
     }
 
-    private fun doHandShake(value: Char, width: Int){   //does the handshake and sends the width
+    private fun doHandShake(value: Char, width: Int, height: Int){   //does the handshake and sends the width
         var x:Int?=0
         updateBroadcastIntent.putExtra(UPDATE_HANDSHAKE_INFO,"doing Handshake")
         sendBroadcast(updateBroadcastIntent)
@@ -144,6 +160,10 @@ class PrintService : Service() {
         }
         try {
             mConnectedThread!!.write(width) //sending the width of image
+            Thread.sleep(5)
+            mConnectedThread!!.write(height/8) //sending the quotient of height
+            Thread.sleep(5)
+            mConnectedThread!!.write(height%8) //sending the remainder of height
             Thread.sleep(5)
             mConnectedThread!!.write(delayRight)
             Thread.sleep(5)
@@ -225,12 +245,16 @@ class PrintService : Service() {
     private fun printDot(){
         Thread {
             try {
-                val image: Bitmap = BitmapFactory.decodeFile(filePath)
-                val data = convert(image)
-                val width = image.width/8
-                val height:Int = image.height
-                if (mConnectedThread != null && data.isNotEmpty()) {
-                    doHandShake('a', width)
+//                val image: Bitmap = BitmapFactory.decodeFile(filePath)
+//                val data = convert(image)
+                val width = image!!.width/8
+                val height:Int = image!!.height
+                while(!isConverted){
+                    //wait until photo is converted
+                    Thread.sleep(100)
+                }
+                if (mConnectedThread != null && data!!.isNotEmpty()) {
+                    doHandShake('a', width, height)
                     updateBroadcastIntent.putExtra(UPDATE_PRINTING_STATUS, "Image printing started")
                     sendBroadcast(updateBroadcastIntent)
                     rate=width*8*(delayWrite*10+delayRight*100+delayLeft*100)/1_000_000
@@ -239,17 +263,19 @@ class PrintService : Service() {
                     secLeft=totalTimeLeft%60
 
                     notificationBuilder
-                            ?.setContentText("${minLeft}M ${secLeft}S left")
+                        ?.setContentText("${minLeft}M ${secLeft}S left")
                     notification=notificationBuilder?.build()
                     notificationManager?.notify(1,notification)
-
+                    waitUntilReady()
                     for (i in 0 until height) {
-                        waitUntilReady()
-                        for (j in 0 until width) {
-                            mConnectedThread!!.write(data[width * i + j])
-                        }
+                        for (j in 0 until width)
+                            mConnectedThread!!.write(data!![width * i + j])
                         updateUI(i,height)
                     }
+
+                    updateUI(height,height)
+                    updateBroadcastIntent.putExtra(UPDATE_PRINTING_STATUS,"Image printed!")
+                    sendBroadcast(updateBroadcastIntent)
                     endTask()
                 }
             } catch (e: NullPointerException) {
@@ -302,18 +328,21 @@ class PrintService : Service() {
     private fun endTask(){
         if(mBTSocket?.isConnected==true)
             mBTSocket?.close()
-        updateBroadcastIntent.putExtra(UPDATE_PRINTING_STATUS,"Image printing done")
-        sendBroadcast(updateBroadcastIntent)
         stopSelf()
     }
 
     private fun updateUI(sent:Int,height:Int){
         totalSent=(100.0*sent.toDouble() / height.toDouble())
+        sb.clear()
+        sb.append(String.format("%.2f",totalSent))
+        sb.append("%")
+
         totalTimeLeft-=rate
         minLeft=totalTimeLeft/60
         secLeft=totalTimeLeft%60
         notificationBuilder
-                ?.setContentText("${minLeft}M ${secLeft}S left")
+            ?.setContentText("${minLeft}M ${secLeft}S left")
+            ?.setContentTitle(sb)
         notification=notificationBuilder?.build()
         notificationManager?.notify(1,notification)
         updateBroadcastIntent.putExtra(UPDATE_SENT,sent)
